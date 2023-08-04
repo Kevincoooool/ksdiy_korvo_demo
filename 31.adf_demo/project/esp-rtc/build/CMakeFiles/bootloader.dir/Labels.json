@@ -1,0 +1,43 @@
+{
+	"sources" : 
+	[
+		{
+			"file" : "F:/Github/ksdiy_korvo_demo/31.adf_demo/project/esp-rtc/build/CMakeFiles/bootloader"
+		},
+		{
+			"file" : "F:/Github/ksdiy_korvo_demo/31.adf_demo/project/esp-rtc/build/CMakeFiles/bootloader.rule"
+		},
+		{
+			"file" : "F:/Github/ksdiy_korvo_demo/31.adf_demo/project/esp-rtc/build/CMakeFiles/bootloader-complete.rule"
+		},
+		{
+			"file" : "F:/Github/ksdiy_korvo_demo/31.adf_demo/project/esp-rtc/build/bootloader-prefix/src/bootloader-stamp/bootloader-build.rule"
+		},
+		{
+			"file" : "F:/Github/ksdiy_korvo_demo/31.adf_demo/project/esp-rtc/build/bootloader-prefix/src/bootloader-stamp/bootloader-configure.rule"
+		},
+		{
+			"file" : "F:/Github/ksdiy_korvo_demo/31.adf_demo/project/esp-rtc/build/bootloader-prefix/src/bootloader-stamp/bootloader-download.rule"
+		},
+		{
+			"file" : "F:/Github/ksdiy_korvo_demo/31.adf_demo/project/esp-rtc/build/bootloader-prefix/src/bootloader-stamp/bootloader-install.rule"
+		},
+		{
+			"file" : "F:/Github/ksdiy_korvo_demo/31.adf_demo/project/esp-rtc/build/bootloader-prefix/src/bootloader-stamp/bootloader-mkdir.rule"
+		},
+		{
+			"file" : "F:/Github/ksdiy_korvo_demo/31.adf_demo/project/esp-rtc/build/bootloader-prefix/src/bootloader-stamp/bootloader-patch.rule"
+		},
+		{
+			"file" : "F:/Github/ksdiy_korvo_demo/31.adf_demo/project/esp-rtc/build/bootloader-prefix/src/bootloader-stamp/bootloader-update.rule"
+		}
+	],
+	"target" : 
+	{
+		"labels" : 
+		[
+			"bootloader"
+		],
+		"name" : "bootloader"
+	}
+}

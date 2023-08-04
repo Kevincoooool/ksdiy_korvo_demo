@@ -1,0 +1,13 @@
+# Target labels
+ bootloader
+# Source files and their labels
+F:/Github/ksdiy_korvo_demo/31.adf_demo/project/esp-rtc/build/CMakeFiles/bootloader
+F:/Github/ksdiy_korvo_demo/31.adf_demo/project/esp-rtc/build/CMakeFiles/bootloader.rule
+F:/Github/ksdiy_korvo_demo/31.adf_demo/project/esp-rtc/build/CMakeFiles/bootloader-complete.rule
+F:/Github/ksdiy_korvo_demo/31.adf_demo/project/esp-rtc/build/bootloader-prefix/src/bootloader-stamp/bootloader-build.rule
+F:/Github/ksdiy_korvo_demo/31.adf_demo/project/esp-rtc/build/bootloader-prefix/src/bootloader-stamp/bootloader-configure.rule
+F:/Github/ksdiy_korvo_demo/31.adf_demo/project/esp-rtc/build/bootloader-prefix/src/bootloader-stamp/bootloader-download.rule
+F:/Github/ksdiy_korvo_demo/31.adf_demo/project/esp-rtc/build/bootloader-prefix/src/bootloader-stamp/bootloader-install.rule
+F:/Github/ksdiy_korvo_demo/31.adf_demo/project/esp-rtc/build/bootloader-prefix/src/bootloader-stamp/bootloader-mkdir.rule
+F:/Github/ksdiy_korvo_demo/31.adf_demo/project/esp-rtc/build/bootloader-prefix/src/bootloader-stamp/bootloader-patch.rule
+F:/Github/ksdiy_korvo_demo/31.adf_demo/project/esp-rtc/build/bootloader-prefix/src/bootloader-stamp/bootloader-update.rule

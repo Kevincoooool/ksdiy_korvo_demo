@@ -1,0 +1,7 @@
+本例程是 有lvgl的把摄像头图像显示到屏幕上
+
+直接下载即可看到
+
+fb = esp_camera_fb_get(); 获取图像
+img_dsc.data = fb->buf;  把图像赋值给一个obj的数据
+			lv_img_set_src(img_cam, &img_dsc);刷新显示

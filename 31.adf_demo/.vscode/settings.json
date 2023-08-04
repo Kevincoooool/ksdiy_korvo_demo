@@ -1,0 +1,12 @@
+{
+    "makefile.extensionOutputFolder": "./.vscode",
+    "files.associations": {
+        "*.inc": "c",
+        "event_groups.h": "c",
+        "chatgpt_ksdiy.h": "c",
+        "bsp_button.h": "c",
+        "sys_msg_deal.h": "c",
+        "chipintelli_ble.h": "c",
+        "*.ipp": "c"
+    }
+}

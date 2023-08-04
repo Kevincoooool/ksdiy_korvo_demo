@@ -1,0 +1,33 @@
+本例程是 测试板载的ADC按键
+
+我是根据在按下按键时adc对应的值来区分五个范围
+
+        {0, 2500, 2800}, //中键  2.25v
+        {1, 1150, 1350}, //右键  1.12v
+        {2, 1800, 2300}, //左键  1.689v
+        {3, 600, 650},   //下键  0.562v
+        {4, 3200, 3600}, //上键  2.81v
+
+
+然后判断在哪一个范围中
+uint8_t Get_Adc_Button()
+{
+    // int adc_value = get_adc();
+    // static uint64_t last_time = 0;
+    for (uint8_t i = 0; i < 5; i++)
+    {
+        // if (adc_value >= touch_chart[i][1] && adc_value <= touch_chart[i][2] && esp_timer_get_time() - last_time > 200000) //限制进入时间
+        if (adc1_get_raw(channel) >= touch_chart[i][1] && adc1_get_raw(channel) <= touch_chart[i][2])
+        {
+            // printf("adc_button: %d\n", i + 1);
+            // last_time = esp_timer_get_time();
+            return i + 1;
+        }
+    }
+    return 0;
+}
+
+返回对应的按键标号 
+
+状态分别有单击 双击  长按  长按松开四种状态
+按键驱动使用的杰杰开源的
