@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2024, sakumisu
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 #include "usbd_core.h"
 #include "usbd_rndis.h"
 
@@ -102,11 +107,32 @@ static const uint8_t cdc_descriptor[] = {
 };
 
 const uint8_t mac[6] = { 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff };
+/*Static IP ADDRESS: IP_ADDR0.IP_ADDR1.IP_ADDR2.IP_ADDR3 */
+#define IP_ADDR0 (uint8_t)192
+#define IP_ADDR1 (uint8_t)168
+#define IP_ADDR2 (uint8_t)123
+#define IP_ADDR3 (uint8_t)100
+
+/*NETMASK*/
+#define NETMASK_ADDR0 (uint8_t)255
+#define NETMASK_ADDR1 (uint8_t)255
+#define NETMASK_ADDR2 (uint8_t)255
+#define NETMASK_ADDR3 (uint8_t)0
+
+/*Gateway Address*/
+#define GW_ADDR0 (uint8_t)192
+#define GW_ADDR1 (uint8_t)168
+#define GW_ADDR2 (uint8_t)123
+#define GW_ADDR3 (uint8_t)1
 
 #ifdef RT_USING_LWIP
 #include <rtthread.h>
 #include <rtdevice.h>
 #include <netif/ethernetif.h>
+
+const ip_addr_t ipaddr = IPADDR4_INIT_BYTES(IP_ADDR0, IP_ADDR1, IP_ADDR2, IP_ADDR3);
+const ip_addr_t netmask = IPADDR4_INIT_BYTES(NETMASK_ADDR0, NETMASK_ADDR1, NETMASK_ADDR2, NETMASK_ADDR3);
+const ip_addr_t gateway = IPADDR4_INIT_BYTES(GW_ADDR0, GW_ADDR1, GW_ADDR2, GW_ADDR3);
 
 struct eth_device rndis_dev;
 
@@ -161,33 +187,15 @@ void rt_usbd_rndis_init(void)
 #include "lwip/netif.h"
 #include "lwip/pbuf.h"
 
-/*Static IP ADDRESS: IP_ADDR0.IP_ADDR1.IP_ADDR2.IP_ADDR3 */
-#define IP_ADDR0      (uint8_t)192
-#define IP_ADDR1      (uint8_t)168
-#define IP_ADDR2      (uint8_t)123
-#define IP_ADDR3      (uint8_t)100
-
-/*NETMASK*/
-#define NETMASK_ADDR0 (uint8_t)255
-#define NETMASK_ADDR1 (uint8_t)255
-#define NETMASK_ADDR2 (uint8_t)255
-#define NETMASK_ADDR3 (uint8_t)0
-
-/*Gateway Address*/
-#define GW_ADDR0      (uint8_t)192
-#define GW_ADDR1      (uint8_t)168
-#define GW_ADDR2      (uint8_t)123
-#define GW_ADDR3      (uint8_t)1
-
-static struct netif rndis_netif; //network interface
-
 const ip_addr_t ipaddr = IPADDR4_INIT_BYTES(IP_ADDR0, IP_ADDR1, IP_ADDR2, IP_ADDR3);
 const ip_addr_t netmask = IPADDR4_INIT_BYTES(NETMASK_ADDR0, NETMASK_ADDR1, NETMASK_ADDR2, NETMASK_ADDR3);
 const ip_addr_t gateway = IPADDR4_INIT_BYTES(GW_ADDR0, GW_ADDR1, GW_ADDR2, GW_ADDR3);
 
+static struct netif rndis_netif; //network interface
+
 /* Network interface name */
-#define IFNAME0       'E'
-#define IFNAME1       'X'
+#define IFNAME0 'E'
+#define IFNAME1 'X'
 
 err_t linkoutput_fn(struct netif *netif, struct pbuf *p)
 {
@@ -203,7 +211,7 @@ err_t linkoutput_fn(struct netif *netif, struct pbuf *p)
 err_t rndisif_init(struct netif *netif)
 {
     LWIP_ASSERT("netif != NULL", (netif != NULL));
-    
+
     netif->mtu = 1500;
     netif->flags = NETIF_FLAG_BROADCAST | NETIF_FLAG_ETHARP | NETIF_FLAG_LINK_UP | NETIF_FLAG_UP;
     netif->state = NULL;
@@ -260,7 +268,7 @@ void rndis_input_poll(void)
 }
 #endif /* RT_USING_LWIP */
 
-void usbd_event_handler(uint8_t event)
+static void usbd_event_handler(uint8_t busid, uint8_t event)
 {
     switch (event) {
         case USBD_EVENT_RESET:
@@ -291,15 +299,15 @@ void usbd_event_handler(uint8_t event)
 struct usbd_interface intf0;
 struct usbd_interface intf1;
 
-void cdc_rndis_init(void)
+void cdc_rndis_init(uint8_t busid, uint32_t reg_base)
 {
 #ifdef RT_USING_LWIP
     rt_usbd_rndis_init();
 #else
     rndis_lwip_init();
 #endif
-    usbd_desc_register(cdc_descriptor);
-    usbd_add_interface(usbd_rndis_init_intf(&intf0, CDC_OUT_EP, CDC_IN_EP, CDC_INT_EP, mac));
-    usbd_add_interface(usbd_rndis_init_intf(&intf1, CDC_OUT_EP, CDC_IN_EP, CDC_INT_EP, mac));
-    usbd_initialize();
+    usbd_desc_register(busid, cdc_descriptor);
+    usbd_add_interface(busid, usbd_rndis_init_intf(&intf0, CDC_OUT_EP, CDC_IN_EP, CDC_INT_EP, mac));
+    usbd_add_interface(busid, usbd_rndis_init_intf(&intf1, CDC_OUT_EP, CDC_IN_EP, CDC_INT_EP, mac));
+    usbd_initialize(busid, reg_base, usbd_event_handler);
 }

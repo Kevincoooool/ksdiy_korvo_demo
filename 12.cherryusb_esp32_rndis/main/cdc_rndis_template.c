@@ -99,9 +99,54 @@ static const uint8_t cdc_descriptor[] = {
     0x00,
 #endif
     0x00};
-const uint8_t tud_network_mac_address[6] = {0x02, 0x02, 0x84, 0x6A, 0x96, 0x00};
 
-const uint8_t mac[6] = {0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff};
+void usbd_rndis_data_recv_done(void)
+{
+}
+
+static uint8_t usb_reset = 0;
+static void usbd_event_handler(uint8_t busid, uint8_t event)
+{
+    switch (event)
+    {
+    case USBD_EVENT_RESET:
+        // usb_reset = 1;
+        USB_LOG_RAW("USBD_EVENT_RESET\r\n");
+        usb_reset++;
+        break;
+    case USBD_EVENT_CONNECTED:
+        USB_LOG_RAW("USBD_EVENT_CONNECTED\r\n");
+
+        break;
+    case USBD_EVENT_DISCONNECTED:
+        USB_LOG_RAW("USBD_EVENT_DISCONNECTED\r\n");
+
+        break;
+    case USBD_EVENT_RESUME:
+        USB_LOG_RAW("USBD_EVENT_RESUME\r\n");
+
+        break;
+    case USBD_EVENT_SUSPEND:
+        USB_LOG_RAW("USBD_EVENT_SUSPEND\r\n");
+
+        break;
+    case USBD_EVENT_CONFIGURED:
+        USB_LOG_RAW("USBD_EVENT_CONFIGURED\r\n");
+
+#ifdef RT_USING_LWIP
+        eth_device_linkchange(&rndis_dev, RT_TRUE);
+#endif
+        break;
+    case USBD_EVENT_SET_REMOTE_WAKEUP:
+        break;
+    case USBD_EVENT_CLR_REMOTE_WAKEUP:
+        break;
+
+    default:
+        break;
+    }
+}
+
 uint8_t recieve_ok = 0;
 
 #include "esp_netif.h"
@@ -111,7 +156,6 @@ uint8_t recieve_ok = 0;
 #include "esp_event.h"
 #include "esp_wifi_netif.h"
 #include "esp_private/wifi.h"
-static uint8_t usb_reset = 0;
 
 static uint8_t tud_rx_buf[4500];
 static size_t tud_rx_len = 0;
@@ -121,7 +165,6 @@ static const char *TAG = "usbx_net";
 #include "lwip/init.h"
 #include "lwip/netif.h"
 #include "lwip/pbuf.h"
-
 
 static esp_netif_t *usb_netif;
 
@@ -144,16 +187,14 @@ void *netsuite_io_new(void)
 {
     return (void *)&s_driver_base;
 }
-const esp_netif_ip_info_t netif_subnet_ip = {
-    // mesh subnet IP info
-    .ip = {.addr = ESP_IP4TOADDR(189, 254, 1, 1)}, // 189.254.4.1
-    .gw = {.addr = ESP_IP4TOADDR(189, 254, 1, 1)},
-    .netmask = {.addr = ESP_IP4TOADDR(255, 255, 255, 0)},
-};
+
 const esp_netif_ip_info_t my_g_esp_netif_soft_ap_ip = {
-    .ip = {.addr = ESP_IP4TOADDR(189, 254, 1, 1)}, // 189.254.4.1
-    .gw = {.addr = ESP_IP4TOADDR(189, 254, 1, 1)},
-    .netmask = {.addr = ESP_IP4TOADDR(255, 255, 255, 0)},
+    // .ip = {.addr = ESP_IP4TOADDR(189, 254, 1, 1)}, // 189.254.4.1
+    // .gw = {.addr = ESP_IP4TOADDR(189, 254, 1, 1)},
+    // .netmask = {.addr = ESP_IP4TOADDR(255, 255, 255, 0)},
+    .ip = {.addr = ESP_IP4TOADDR(192, 168, 4, 1)}, // 189.254.4.1
+    .gw = {.addr = ESP_IP4TOADDR(192, 168, 4, 1)},
+    .netmask = {.addr = ESP_IP4TOADDR(255, 255, 0, 0)},
 };
 
 /** Event handler for IP_EVENT_ETH_GOT_IP */
@@ -167,92 +208,92 @@ static void got_ip_event_handler(void *arg, esp_event_base_t event_base,
 }
 static uint8_t cnt = 0;
 static char cnt_buf[10] = {0};
-
-esp_err_t usbx_netif_init(esp_netif_t *netif)
-{
-    cnt++;
-    usb_netif = netif;
-
-    esp_netif_inherent_config_t esp_netif_config = ESP_NETIF_INHERENT_DEFAULT_WIFI_AP();
-    esp_netif_config.ip_info = &my_g_esp_netif_soft_ap_ip;
-    esp_netif_config.if_desc = "mywifi";
-
-    sprintf(cnt_buf, "test%d", cnt);
-    esp_netif_config.if_key = cnt_buf;
-    esp_netif_config.route_prio = 10;
-
-    netif = esp_netif_create_wifi(WIFI_IF_AP, &esp_netif_config);
-
-    esp_netif_ip_info_t ipInfo;
-    IP4_ADDR(&ipInfo.ip, 189, 254, 1, 1);        // 设置 IP 地址
-    IP4_ADDR(&ipInfo.gw, 189, 254, 1, 1);        // 设置网关
-    IP4_ADDR(&ipInfo.netmask, 255, 255, 255, 0); // 设置子网掩码
-    esp_netif_set_ip_info(netif, &ipInfo);
-    // esp_netif_set_mac(netif, tud_network_mac_address);
-    assert(netif);
-
-    esp_netif_attach(netif, netsuite_io_new());
-    // esp_netif_set_ip_info(netif, &ipInfo);
-    uint8_t actual_mac[6] = {0};
-    esp_netif_get_mac(netif, actual_mac);
-    for (size_t i = 0; i < 6; i++)
-    {
-        printf("%x", actual_mac[i]);
-    }
-    esp_netif_action_start(netif, NULL, 0, NULL);
-    ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, IP_EVENT_AP_STAIPASSIGNED, &got_ip_event_handler, netif));
-    // esp_netif_set_ip_info(netif, &ipInfo);
-
-    return ESP_OK;
-}
-
-void usbd_event_handler(uint8_t event)
-{
-    switch (event)
-    {
-    case USBD_EVENT_RESET:
-        CONFIG_USB_PRINTF("connect USBD_EVENT_RESET\n");
-        usb_reset = 1;
-
-        break;
-    case USBD_EVENT_CONNECTED:
-        CONFIG_USB_PRINTF("connect USBD_EVENT_CONNECTED\n");
-        break;
-    case USBD_EVENT_DISCONNECTED:
-        CONFIG_USB_PRINTF("disconnect USBD_EVENT_DISCONNECTED\n");
-
-        break;
-    case USBD_EVENT_RESUME:
-        CONFIG_USB_PRINTF("USBD_EVENT_RESUME \n");
-        break;
-    case USBD_EVENT_SUSPEND:
-        CONFIG_USB_PRINTF("USBD_EVENT_SUSPEND \n");
-        break;
-    case USBD_EVENT_CONFIGURED:
-#ifdef RT_USING_LWIP
-        eth_device_linkchange(&rndis_dev, RT_TRUE);
-#endif
-        break;
-    case USBD_EVENT_SET_REMOTE_WAKEUP:
-        break;
-    case USBD_EVENT_CLR_REMOTE_WAKEUP:
-        break;
-
-    default:
-        break;
-    }
-}
-
+uint8_t mac_addr[6];
 struct usbd_interface intf0;
 struct usbd_interface intf1;
 
-void cdc_rndis_init(void)
+void cdc_rndis_init(uint8_t busid, uint32_t reg_base)
+{
+    esp_read_mac(mac_addr, ESP_MAC_WIFI_STA);
+    usbd_desc_register(busid, cdc_descriptor);
+    usbd_add_interface(busid, usbd_rndis_init_intf(&intf0, CDC_OUT_EP, CDC_IN_EP, CDC_INT_EP, mac_addr));
+    usbd_add_interface(busid, usbd_rndis_init_intf(&intf1, CDC_OUT_EP, CDC_IN_EP, CDC_INT_EP, mac_addr));
+    usbd_initialize(busid, reg_base, usbd_event_handler);
+}
+esp_err_t usbx_netif_init(esp_netif_t *netif)
 {
 
-    usbd_desc_register(cdc_descriptor);
-    usbd_add_interface(usbd_rndis_init_intf(&intf0, CDC_OUT_EP, CDC_IN_EP, CDC_INT_EP, tud_network_mac_address));
-    usbd_add_interface(usbd_rndis_init_intf(&intf1, CDC_OUT_EP, CDC_IN_EP, CDC_INT_EP, tud_network_mac_address));
-    usbd_initialize();
+    cdc_rndis_init(0, 0x60080000);
+    cnt++;
+    // usb_netif = netif;
+    // ESP_ERROR_CHECK(esp_event_loop_create_default());
+    // esp_netif_inherent_config_t esp_netif_config = ESP_NETIF_INHERENT_DEFAULT_WIFI_AP();
+    // esp_netif_config.ip_info = &my_g_esp_netif_soft_ap_ip;
+    // esp_netif_config.if_desc = "mywifi";
+
+    // sprintf(cnt_buf, "test%d", cnt);
+    // esp_netif_config.if_key = cnt_buf;
+    // esp_netif_config.route_prio = 10;
+
+    // usb_netif = esp_netif_create_wifi(WIFI_IF_AP, &esp_netif_config);
+
+    //    esp_netif_config_t cfg = ESP_NETIF_DEFAULT_WIFI_AP();
+    //     usb_netif = esp_netif_new(&cfg);
+    // esp_netif_inherent_config_t base_cfg = ESP_NETIF_INHERENT_DEFAULT_WIFI_STA();
+    // base_cfg.if_desc = "mesh_link_ap";
+    // base_cfg.ip_info = &my_g_esp_netif_soft_ap_ip;
+
+    // esp_netif_config_t cfg = {
+    //     .base = &base_cfg,
+    //     .driver = NULL,
+    //     .stack = ESP_NETIF_NETSTACK_DEFAULT_WIFI_STA};
+    // usb_netif = esp_netif_new(&cfg);
+
+    // esp_netif_attach_wifi_station(usb_netif);
+
+
+
+    // printf("Registering Wifi station driver...\n");
+//   esp_netif_config_t cfg_sta = ESP_NETIF_DEFAULT_WIFI_STA();
+//   netif_sta = esp_netif_new(&cfg_sta);
+//   assert(netif_sta);
+//   ESP_ERROR_CHECK(esp_netif_attach_wifi_station(netif_sta));
+//   // ESP_ERROR_CHECK(esp_wifi_set_default_wifi_sta_handlers());
+//   sta_driver = (wifi_netif_driver_t)esp_netif_get_io_driver(netif_sta);
+//   ESP_ERROR_CHECK(esp_wifi_register_if_rxcb(sta_driver, wifi_rx_cb, netif_sta));
+static wifi_netif_driver_t ap_driver = NULL;
+  printf("Registering Wifi AP driver...\n");
+  esp_netif_config_t cfg_ap = ESP_NETIF_DEFAULT_WIFI_AP();
+  usb_netif = esp_netif_new(&cfg_ap);
+  assert(usb_netif);
+  ESP_ERROR_CHECK(esp_netif_attach_wifi_ap(usb_netif));
+  // ESP_ERROR_CHECK(esp_wifi_set_default_wifi_ap_handlers());
+  ap_driver = (wifi_netif_driver_t)esp_netif_get_io_driver(usb_netif);
+  ESP_ERROR_CHECK(esp_wifi_register_if_rxcb(ap_driver, esp_netif_receive, usb_netif));
+
+    assert(usb_netif);
+
+    esp_netif_attach(usb_netif, netsuite_io_new());
+    uint8_t actual_mac[6] = {0};
+    esp_netif_get_mac(usb_netif, actual_mac);
+    for (size_t i = 0; i < 6; i++)
+    {
+        printf("%x ", actual_mac[i]);
+    }
+    esp_netif_action_start(usb_netif, NULL, 0, NULL);
+
+    ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, IP_EVENT_AP_STAIPASSIGNED, &got_ip_event_handler, usb_netif));
+    ESP_LOGI(TAG, "Start netif ok");
+    esp_netif_dhcpc_start(usb_netif);
+    // esp_netif_set_ip_info(netif, &ipInfo);
+    xTaskCreate(
+        usb_task,   /* Task function. */
+        "usbxTask", /* name of task. */
+        3 * 1024,   /* Stack size of task */
+        usb_netif,  /* parameter of the task */
+        8,          /* priority of the task */
+        NULL);      /* Task handle to keep track of created task */
+    return ESP_OK;
 }
 
 static esp_err_t netsuite_io_attach(esp_netif_t *esp_netif, void *arg)
@@ -284,38 +325,104 @@ static esp_err_t netsuite_io_transmit(void *h, void *buffer, size_t len)
         vTaskDelay(1 / portTICK_PERIOD_MS);
     }
 }
-
-void check_usb_task(void *arg)
+static void usb_task(void *arg)
 {
+    esp_netif_t *netif = (esp_netif_t *)arg;
+    size_t hs;
     static struct pbuf *p;
+    static uint8_t state = 0;
+
     while (1)
     {
-        if (usb_reset == 1)
+        p = usbd_rndis_eth_rx();
+        if (p != NULL)
         {
-            usbd_deinitialize();
-
             if (usb_netif)
-            {
-                // esp_netif_destroy_default_wifi(usb_netif);
-                esp_netif_destroy(usb_netif);
-                usb_netif = NULL;
-            }
-            usbx_netif_init(usb_netif);
-            vTaskDelay(100 / portTICK_PERIOD_MS);
-            usb_reset = 0;
+                esp_netif_receive(usb_netif, p->payload, p->len, NULL);
+            pbuf_free(p);
         }
         else
         {
-            p = usbd_rndis_eth_rx();
-            if (p != NULL)
+            vTaskDelay(1);
+        }
+        // switch (state)
+        // {
+        // case 0: // 开机初始化
+        //     cdc_rndis_init(0, 0x60080000);
+        //     state = 1;
+        //     break;
+        // case 1: // 已经成功初始化USB 等待检测到拔出后重新初始化
+        //     if (usb_reset == 4)
+        //     {
+        //         usbd_deinitialize(0);
+        //         cdc_rndis_init(0, 0x60080000);
+        //         usb_reset = 0;
+        //     }
+        //     break;
+        // default:
+        //     break;
+        // }
+        // vTaskDelay(1);
+    }
+}
+void check_usb_task(void *arg)
+{
+    static uint8_t state = 0;
+    while (1)
+    {
+        switch (state)
+        {
+        case 0: // 开机初始化
+            cdc_rndis_init(0, 0x60080000);
+            state = 1;
+
+            break;
+        case 1: // 已经成功初始化USB 等待检测到拔出后重新初始化
+            if (usb_reset == 4)
             {
-                if (usb_netif)
-                {
-                    esp_netif_receive(usb_netif, p->payload, p->len, NULL);
-                }
-                pbuf_free(p);
+
+                usbd_deinitialize(0);
+                cdc_rndis_init(0, 0x60080000);
+                usb_reset = 0;
             }
+            break;
+        default:
+            break;
         }
         vTaskDelay(1);
     }
 }
+// void check_usb_task(void *arg)
+// {
+//     static struct pbuf *p;
+//     while (1)
+//     {
+//         if (usb_reset == 1)
+//         {
+//             usbd_deinitialize(0);
+
+//             if (usb_netif)
+//             {
+//                 // esp_netif_destroy_default_wifi(usb_netif);
+//                 esp_netif_destroy(usb_netif);
+//                 usb_netif = NULL;
+//             }
+//             usbx_netif_init(usb_netif);
+//             vTaskDelay(100 / portTICK_PERIOD_MS);
+//             usb_reset = 0;
+//         }
+//         else
+//         {
+//             p = usbd_rndis_eth_rx();
+//             if (p != NULL)
+//             {
+//                 if (usb_netif)
+//                 {
+//                     esp_netif_receive(usb_netif, p->payload, p->len, NULL);
+//                 }
+//                 pbuf_free(p);
+//             }
+//         }
+//         vTaskDelay(1);
+//     }
+// }

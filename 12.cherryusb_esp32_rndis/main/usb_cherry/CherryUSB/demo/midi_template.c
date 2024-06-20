@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2024, sakumisu
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 #include "usbd_core.h"
 #include "usb_midi.h"
 
@@ -9,7 +14,7 @@
 #define USBD_MAX_POWER     100
 #define USBD_LANGID_STRING 1033
 
-#define USB_CONFIG_SIZE (9 + 9 + 9 + 9 + 7 + MIDI_SIZEOF_JACK_DESC + 7 + 5 + 7 + 5)
+#define USB_CONFIG_SIZE (9 + 9 + 9 + 9 + 7 + MIDI_SIZEOF_JACK_DESC + 9 + 5 + 9 + 5)
 
 #ifdef CONFIG_USB_HS
 #define MIDI_EP_MPS 512
@@ -64,11 +69,11 @@ const uint8_t midi_descriptor[] = {
     // MIDI_OUT_JACK_DESCRIPTOR_INIT(MIDI_JACK_TYPE_EXTERNAL, 0x04, 0x01),
     MIDI_JACK_DESCRIPTOR_INIT(0x01),
     // OUT endpoint descriptor
-    USB_ENDPOINT_DESCRIPTOR_INIT(MIDI_OUT_EP, 0x02, MIDI_EP_MPS, 0x00),
+    0x09, 0x05, MIDI_OUT_EP, 0x02, WBVAL(MIDI_EP_MPS), 0x00, 0x00, 0x00,
     0x05, 0x25, 0x01, 0x01, 0x01,
 
     // IN endpoint descriptor
-    USB_ENDPOINT_DESCRIPTOR_INIT(MIDI_IN_EP, 0x02, MIDI_EP_MPS, 0x00),
+    0x09, 0x05, MIDI_IN_EP, 0x02, WBVAL(MIDI_EP_MPS), 0x00, 0x00, 0x00,
     0x05, 0x25, 0x01, 0x01, 0x03,
 
     ///////////////////////////////////////
@@ -146,7 +151,7 @@ const uint8_t midi_descriptor[] = {
     0x00
 };
 
-void usbd_event_handler(uint8_t event)
+static void usbd_event_handler(uint8_t busid, uint8_t event)
 {
     switch (event) {
         case USBD_EVENT_RESET:
@@ -171,11 +176,11 @@ void usbd_event_handler(uint8_t event)
     }
 }
 
-void usbd_midi_bulk_out(uint8_t ep, uint32_t nbytes)
+void usbd_midi_bulk_out(uint8_t busid, uint8_t ep, uint32_t nbytes)
 {
 }
 
-void usbd_midi_bulk_in(uint8_t ep, uint32_t nbytes)
+void usbd_midi_bulk_in(uint8_t busid, uint8_t ep, uint32_t nbytes)
 {
 }
 
@@ -192,13 +197,13 @@ struct usbd_endpoint midi_in_ep = {
     .ep_cb = usbd_midi_bulk_in
 };
 
-void midi_init(void)
+void midi_init(uint8_t busid, uint32_t reg_base)
 {
-    usbd_desc_register(midi_descriptor);
-    usbd_add_interface(&intf0);
-    usbd_add_interface(&intf1);
-    usbd_add_endpoint(&midi_out_ep);
-    usbd_add_endpoint(&midi_in_ep);
+    usbd_desc_register(busid, midi_descriptor);
+    usbd_add_interface(busid, &intf0);
+    usbd_add_interface(busid, &intf1);
+    usbd_add_endpoint(busid, &midi_out_ep);
+    usbd_add_endpoint(busid, &midi_in_ep);
 
-    usbd_initialize();
+    usbd_initialize(busid, reg_base, usbd_event_handler);
 }

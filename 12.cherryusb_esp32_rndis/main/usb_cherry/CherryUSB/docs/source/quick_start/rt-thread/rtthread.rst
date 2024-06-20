@@ -21,7 +21,7 @@
 
 .. figure:: img/env4.png
 
-* 选择好 USB device ip 以后，还需要选择是哪款芯片，第三个配置则是用来选择芯片，选择以后会帮忙配置相对应的 ip 的一些信息，比如 `USB_BASE` 、 `USBD_Handler` 以及特殊的一些配置等等，如果没找到自己的芯片，可以手动在 `usb_dc_xxx.c` 中修改。
+* 选择好 USB device ip 以后，还需要选择是哪款芯片，第三个配置则是用来选择芯片，选择以后会配置相应的 ip 的一些信息和 glue 文件
 
 .. figure:: img/env5.png
 
@@ -30,12 +30,31 @@
 .. figure:: img/env6.png
 
 * 最后退出保存即可。
-* 退出以后不急着编译，需要在代码中实现 `usb_dc_low_level_init` 函数。
-* 复制一份 `usb_config.h` 到自己的目录中，并实现以下内容：
+* 拷贝 `cherryusb_config_template.h` 文件到自己工程目录下，命名为 `usb_config.h`，并添加相应的目录头文件路径,并实现以下内容：
 
 .. figure:: img/config_file.png
 
-* 使用 `scons --target=mdk` 或者 `scons` 进行编译
+* 退出以后不急着编译，需要在代码中实现 `usb_dc_low_level_init` 函数。
+* 调用 `usbd_initialize` 并填入 `busid` 和 USB IP 的 `reg base`， `busid` 从 0 开始，不能超过 `CONFIG_USBDEV_MAX_BUS`
+* 以上内容我们推荐放在 **board.c** 中，如下代码：
+
+.. code-block:: C
+
+        void OTG_HS_IRQHandler(void)
+        {
+        extern void USBD_IRQHandler(uint8_t busid);
+        USBD_IRQHandler(0);
+        }
+
+        int usbd_init(void)
+        {
+        xxx_template_init(0, USB_OTG_HS_PERIPH_BASE);
+        return 0;
+        }
+
+        INIT_APP_EXPORT(usbd_init);
+
+* 使用 `scons --target=mdk5` 或者 `scons` 进行编译，如果是mdk，需要使用 AC6 编译器
 
 主机配置
 --------------------------
@@ -48,15 +67,33 @@
 
 .. figure:: img/env8.png
 
-* 默认使能除了 hub 之外的所有 class 驱动。
-* 设置 psc 线程的线程栈以及线程优先级。
+* 根据需要勾选 class 驱动
 * 最后退出保存即可。
-* 退出以后不急着编译，需要在代码中实现 `usb_hc_low_level_init` 函数。
-* 复制一份 `usb_config.h` 到自己的目录中，并实现以下内容：
+* 拷贝 `cherryusb_config_template.h` 文件到自己工程目录下，命名为 `usb_config.h`，并添加相应的目录头文件路径,并实现以下内容：
 
 .. figure:: img/config_file.png
 
-* 使用 `scons --target=mdk` 或者 `scons` 进行编译
+* 在代码中实现 `usb_hc_low_level_init` 函数
+* 调用 `usbh_initialize` 并填入 `busid` 和 USB IP 的 `reg base`， `busid` 从 0 开始，不能超过 `CONFIG_USBHOST_MAX_BUS`
+* 以上内容我们推荐放在 **board.c** 中，如下代码：
+
+.. code-block:: C
+
+        void OTG_HS_IRQHandler(void)
+        {
+        extern void USBH_IRQHandler(uint8_t busid);
+        USBH_IRQHandler(0);
+        }
+
+        int usbh_init(void)
+        {
+        usbh_initialize(0, USB_OTG_HS_PERIPH_BASE);
+        return 0;
+        }
+
+        INIT_APP_EXPORT(usbh_init);
+
+* 使用 `scons --target=mdk5` 或者 `scons` 进行编译，如果是mdk，需要使用 AC6 编译器
 * 如果使用的是 GCC ，需要在链接脚本(ld)中添加如下代码：
 
 .. code-block:: C
@@ -71,17 +108,17 @@
 借助 STM32CubeMX 生成 USB 初始化
 ----------------------------------
 
-使用 STM32CubeMX 主要是用来生成 usb 时钟、引脚、中断的配置。我们需要点击如图所示文件，并配置好 USB 的时钟、中断，点击 `Generate Code`。生成的时钟配置在 `main.c` 中的 `SystemClock_Config` 文件，将其拷贝到 `board.c` 中。
+使用 STM32CubeMX 主要是用来生成 usb 时钟、引脚、中断的配置。我们需要点击如图所示文件，并配置好 USB 的时钟、中断，点击 `Generate Code`。
 
 .. figure:: img/stm32cubemx0.png
 .. figure:: img/stm32cubemx1.png
 .. figure:: img/stm32cubemx2.png
 .. figure:: img/stm32cubemx_clk.png
 
-然后将 `stm32xxxx_hal_msp.c` 中的 `HAL_PCD_MspInit` 或者是 `HAL_HCD_MspInit` 中的内容复制到 `usb_dc_low_level_init` 和 `usb_hc_low_level_init` 函数中，举例如下：
-
-.. figure:: img/stm32_init.png
-
-其次将 `main.c` 中的 `SystemClock_Config` 替换掉 `board.c` 中的配置
+- 将 `main.c` 中的 `SystemClock_Config` 替换掉 `board.c` 中的配置
 
 .. figure:: img/stm32_init2.png
+
+- 将 `stm32xxxx_hal_msp.c` 中的 `HAL_PCD_MspInit` 或者是 `HAL_HCD_MspInit` 中的内容复制到 `usb_dc_low_level_init` 和 `usb_hc_low_level_init` 函数中，举例如下：
+
+.. figure:: img/stm32_init.png

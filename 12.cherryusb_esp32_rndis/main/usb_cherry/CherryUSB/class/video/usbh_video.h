@@ -22,20 +22,29 @@ struct usbh_video_format {
     uint8_t num_of_frames;
 };
 
+struct usbh_videoframe {
+    uint8_t *frame_buf;
+    uint32_t frame_bufsize;
+    uint32_t frame_format;
+    uint32_t frame_size;
+};
+
 struct usbh_videostreaming {
+    struct usbh_videoframe *frame;
+    uint32_t frame_format;
     uint32_t bufoffset;
-    uint32_t buflen;
-    void (*video_one_frame_callback)(struct usbh_videostreaming *stream);
+    uint16_t width;
+    uint16_t height;
 };
 
 struct usbh_video {
     struct usbh_hubport *hport;
+    struct usb_endpoint_descriptor *isoin;  /* ISO IN endpoint */
+    struct usb_endpoint_descriptor *isoout; /* ISO OUT endpoint */
 
     uint8_t ctrl_intf; /* interface number */
     uint8_t data_intf; /* interface number */
     uint8_t minor;
-    usbh_pipe_t isoin;  /* ISO IN endpoint */
-    usbh_pipe_t isoout; /* ISO OUT endpoint */
     struct video_probe_and_commit_controls probe;
     struct video_probe_and_commit_controls commit;
     uint16_t isoin_mps;
@@ -46,17 +55,16 @@ struct usbh_video {
     uint8_t num_of_intf_altsettings;
     uint8_t num_of_formats;
     struct usbh_video_format format[3];
+
+    void *user_data;
 };
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-int usbh_video_get_cur(struct usbh_video *video_class, uint8_t intf, uint8_t entity_id, uint8_t cs, uint8_t *buf, uint16_t len);
-int usbh_video_set_cur(struct usbh_video *video_class, uint8_t intf, uint8_t entity_id, uint8_t cs, uint8_t *buf, uint16_t len);
-int usbh_videostreaming_get_cur_probe(struct usbh_video *video_class);
-int usbh_videostreaming_set_cur_probe(struct usbh_video *video_class, uint8_t formatindex, uint8_t frameindex);
-int usbh_videostreaming_set_cur_commit(struct usbh_video *video_class, uint8_t formatindex, uint8_t frameindex);
+int usbh_video_get(struct usbh_video *video_class, uint8_t request, uint8_t intf, uint8_t entity_id, uint8_t cs, uint8_t *buf, uint16_t len);
+int usbh_video_set(struct usbh_video *video_class, uint8_t request, uint8_t intf, uint8_t entity_id, uint8_t cs, uint8_t *buf, uint16_t len);
 
 int usbh_video_open(struct usbh_video *video_class,
                     uint8_t format_type,

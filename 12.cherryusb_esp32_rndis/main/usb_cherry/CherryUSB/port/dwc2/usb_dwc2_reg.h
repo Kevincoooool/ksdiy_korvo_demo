@@ -1,5 +1,10 @@
-#ifndef __USB_SYNOPSYS_REG_H__
-#define __USB_SYNOPSYS_REG_H__
+/*
+ * Copyright (c) 2022, sakumisu
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+#ifndef __USB_DWC2_REG_H__
+#define __USB_DWC2_REG_H__
 
 #define     __IO    volatile             /*!< Defines 'read / write' permissions */
 /**
@@ -104,6 +109,9 @@ typedef struct
   __IO uint32_t HPTXSTS;          /*!< Host Periodic Tx FIFO/ Queue Status  410h */
   __IO uint32_t HAINT;            /*!< Host All Channels Interrupt Register 414h */
   __IO uint32_t HAINTMSK;         /*!< Host All Channels Interrupt Mask     418h */
+  __IO uint32_t HFLBADDR;         /*!< Host frame list base address register 41Ch */
+  uint32_t Reserved420[8];        /*!< Reserved                              420h */
+  __IO uint32_t HPRT;             /*!< Host port control and status register 440h */
 } USB_OTG_HostTypeDef;
 
 /**
@@ -117,6 +125,8 @@ typedef struct
   __IO uint32_t HCINTMSK;         /*!< Host Channel Interrupt Mask Register     50Ch */
   __IO uint32_t HCTSIZ;           /*!< Host Channel Transfer Size Register      510h */
   __IO uint32_t HCDMA;            /*!< Host Channel DMA Address Register        514h */
+  uint32_t Reserved0;             /*!< Reserved                                 518h */
+  __IO uint32_t HCDMAB;           /*!< Host Channel DMA Address Buffer Register 51Ch */
   uint32_t Reserved[2];           /*!< Reserved                                      */
 } USB_OTG_HostChannelTypeDef;
 
@@ -240,6 +250,10 @@ typedef struct
 #define USB_OTG_DCFG_ERRATIM_Pos                 (15U)
 #define USB_OTG_DCFG_ERRATIM_Msk                 (0x1UL << USB_OTG_DCFG_ERRATIM_Pos) /*!< 0x00008000 */
 #define USB_OTG_DCFG_ERRATIM                     USB_OTG_DCFG_ERRATIM_Msk        /*!< Erratic error interrupt mask */
+
+#define USB_OTG_DCFG_DESCDMA_Pos                 (23U)
+#define USB_OTG_DCFG_DESCDMA_Msk                 (0x1UL << USB_OTG_DCFG_DESCDMA_Pos)
+#define USB_OTG_DCFG_DESCDMA                     USB_OTG_DCFG_DESCDMA_Msk
 
 #define USB_OTG_DCFG_PERSCHIVL_Pos               (24U)
 #define USB_OTG_DCFG_PERSCHIVL_Msk               (0x3UL << USB_OTG_DCFG_PERSCHIVL_Pos) /*!< 0x03000000 */
@@ -1701,4 +1715,7 @@ typedef struct
 #define USB_MASK_HALT_HC_INT(chnum)                         (USB_OTG_HC(chnum)->HCINTMSK &= ~USB_OTG_HCINTMSK_CHHM)
 #define USB_UNMASK_HALT_HC_INT(chnum)                       (USB_OTG_HC(chnum)->HCINTMSK |= USB_OTG_HCINTMSK_CHHM)
 #define CLEAR_HC_INT(chnum, __INTERRUPT__)                  (USB_OTG_HC(chnum)->HCINT = (__INTERRUPT__))
+
+uint32_t usbd_get_dwc2_gccfg_conf(uint32_t reg_base);
+uint32_t usbh_get_dwc2_gccfg_conf(uint32_t reg_base);
 #endif

@@ -11,9 +11,7 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-extern volatile uint8_t *g_rndis_rx_data_buffer;
-extern volatile uint32_t g_rndis_rx_data_length;
-extern volatile uint32_t g_rndis_tx_data_length;
+
 /* Init rndis interface driver */
 struct usbd_interface *usbd_rndis_init_intf(struct usbd_interface *intf,
                                              const uint8_t out_ep,

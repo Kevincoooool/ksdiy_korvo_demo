@@ -4,7 +4,7 @@
 
 CherryUSB 是一个小而美的、可移植性高的、用于嵌入式系统(带 USB IP)的 USB 主从协议栈。
 
-![CherryUSB](./docs/assets/CherryUSB.svg)
+![CherryUSB](CherryUSB.svg)
 
 ## 为什么选择
 
@@ -68,7 +68,7 @@ CherryUSB Device 协议栈当前实现以下功能：
 - 支持 USB2.0 全速和高速设备，USB3.0 超速设备
 - 支持端点中断注册功能，porting 给用户自己处理中断里的数据
 - 支持复合设备
-- 支持 Communication Device Class (CDC)
+- 支持 Communication Device Class (CDC_ACM, CDC_ECM)
 - 支持 Human Interface Device (HID)
 - 支持 Mass Storage Class (MSC)
 - 支持 USB VIDEO CLASS (UVC1.0、UVC1.5)
@@ -78,6 +78,7 @@ CherryUSB Device 协议栈当前实现以下功能：
 - 支持 Remote NDIS (RNDIS)
 - 支持 WINUSB1.0、WINUSB2.0(带 BOS )
 - 支持 Vendor 类 class
+- 支持相同 USB IP 的多从机
 
 CherryUSB Device 协议栈资源占用说明（GCC 10.2 with -O2）：
 
@@ -100,37 +101,42 @@ CherryUSB Host 协议栈当前实现以下功能：
 - 自动加载支持的Class 驱动
 - 支持阻塞式传输和异步传输
 - 支持复合设备
-- 支持多级 HUB,最高可拓展到 7 级
-- 支持 Communication Device Class (CDC)
+- 支持多级 HUB,最高可拓展到 7 级(目前测试 1拖 10 没有问题，当前仅支持 dwc2 和 ehci)
+- 支持 Communication Device Class (CDC_ACM, CDC_ECM)
 - 支持 Human Interface Device (HID)
 - 支持 Mass Storage Class (MSC)
-- Support USB Video CLASS
-- Support USB Audio CLASS
+- Support USB Video CLASS（商业收费）
+- Support USB Audio CLASS（商业收费）
 - 支持 Remote NDIS (RNDIS)
+- 支持 USB Bluetooth (支持 nimble and zephyr bluetooth 协议栈，支持 **CLASS: 0xE0** 或者厂家自定义类，类似于 cdc acm 功能)
 - 支持 Vendor 类 class
+- 支持 USB modeswitch
+- 支持相同 USB IP 的多主机
 
 同时，CherryUSB Host 协议栈还提供了 lsusb 的功能，借助 shell 插件可以查看所有挂载设备的信息，包括外部 hub 上的设备的信息。
 
 CherryUSB Host 协议栈资源占用说明（GCC 10.2 with -O2）：
 
-|   file        |  FLASH (Byte)  |  No Cache RAM (Byte)            |  RAM (Byte)                 |  Heap (Byte)                    |
-|:-------------:|:--------------:|:-------------------------------:|:---------------------------:|:-------------------------------:|
-|usbh_core.c    |  4237          | 512 + 8 * (1+x) *n              | 28                          | sizeof(struct usbh_urb)         |
-|usbh_hub.c     |  2919          | 32 + 4* (1+x) | 12 + sizeof(struct usbh_hub) * (1+x)          | 0                               |
-|usbh_cdc_acm.c |  1099          | 7             | 4  + sizeof(struct usbh_cdc_acm) * x          | 0                               |
-|usbh_msc.c     |  2502          | 32            | 4  + sizeof(struct usbh_msc) * x              | 0                               |
-|usbh_hid.c     |  956           | 128           | 4  + sizeof(struct usbh_hid) * x              | 0                               |
-|usbh_video.c   |  2330          | 128           | 4  + sizeof(struct usbh_video) * x            | 0                               |
-|usbh_audio.c   |  3168          | 128           | 4  + sizeof(struct usbh_audio) * x            | 0                               |
-|usbh_rndis.c   |  3030          | 4096          | 4  + sizeof(struct usbh_rndis) * x            | 0                               |
+|   file        |  FLASH (Byte)  |  No Cache RAM (Byte)            |  RAM (Byte)                 |  Heap (Byte) |
+|:-------------:|:--------------:|:-------------------------------:|:---------------------------:|:------------:|
+|usbh_core.c    |  ~7700          | 512 + 8 * (1+x) *n              | 28                          | 0            |
+|usbh_hub.c     |  ~5600          | 32 + 4* (1+x) | 12 + sizeof(struct usbh_hub) * (1+x)          | 0            |
+|usbh_cdc_acm.c |  ~1200          | 7             | 4  + sizeof(struct usbh_cdc_acm) * x          | 0            |
+|usbh_msc.c     |  ~2500          | 32            | 4  + sizeof(struct usbh_msc) * x              | 0            |
+|usbh_hid.c     |  ~1000          | 128           | 4  + sizeof(struct usbh_hid) * x              | 0            |
+|usbh_video.c   |  ~3700          | 128           | 4  + sizeof(struct usbh_video) * x            | 0            |
+|usbh_audio.c   |  ~3100          | 128           | 4  + sizeof(struct usbh_audio) * x            | 0            |
+|usbh_rndis.c   |  ~3900          | 4096 + 2 * 2048         | sizeof(struct usbh_rndis) * 1       | 0            |
+|usbh_cdc_ecm.c |  ~2500          | 2 * 1514              | sizeof(struct usbh_cdc_ecm) * 1       | 0            |
+|usbh_bluetooth.c |  ~2300        | 2 * 2048(default)   | sizeof(struct usbh_bluetooth) * 1       | 0            |
 
 其中，`sizeof(struct usbh_hub)` 和 `sizeof(struct usbh_hubport)` 受以下宏影响：
 
 ```
 #define CONFIG_USBHOST_MAX_EXTHUBS          1
 #define CONFIG_USBHOST_MAX_EHPORTS          4
-#define CONFIG_USBHOST_MAX_INTERFACES       6
-#define CONFIG_USBHOST_MAX_INTF_ALTSETTINGS 1
+#define CONFIG_USBHOST_MAX_INTERFACES       8
+#define CONFIG_USBHOST_MAX_INTF_ALTSETTINGS 8
 #define CONFIG_USBHOST_MAX_ENDPOINTS        4
 ```
 
@@ -142,17 +148,33 @@ x 受以下宏影响：
 #define CONFIG_USBHOST_MAX_MSC_CLASS     2
 #define CONFIG_USBHOST_MAX_AUDIO_CLASS   1
 #define CONFIG_USBHOST_MAX_VIDEO_CLASS   1
-#define CONFIG_USBHOST_MAX_RNDIS_CLASS   1
-
 ```
+
+## USB IP 支持情况
+
+仅列举标准 USB IP 和商业性 USB IP
+
+|   IP             |  device    | host     | Support status |
+|:----------------:|:----------:|:--------:|:--------------:|
+|  OHCI(intel)     |  none      | OHCI     |  ×   |
+|  EHCI(intel)     |  none      | EHCI     |  √   |
+|  XHCI(intel)     |  none      | XHCI     |  √   |
+|  UHCI(intel)     |  none      | UHCI     |  ×  |
+|  DWC2(synopsys)  |  DWC2      | DWC2     |  √   |
+|  MUSB(mentor)    |  MUSB      | MUSB     |  √   |
+|  FOTG210(faraday)|  FOTG210   | EHCI     |  √   |
+|  CDNS2(cadence)  |  CDNS2     | CDNS2    |  √   |
+|  CDNS3(cadence)  |  CDNS3     | XHCI     |  ×   |
+|  DWC3(synopsys)  |  DWC3      | XHCI     |  ×   |
 
 ## 文档教程
 
-CherryUSB 快速入门、USB 基本概念，API 手册，Class 基本概念和例程，参考 [CherryUSB 文档教程](https://cherryusb.readthedocs.io/)
+CherryUSB 快速入门、USB 基本概念，API 手册，Class 基本概念和例程，参考 [CherryUSB Documentation Tutorial](https://cherryusb.readthedocs.io/)
 
 ## 视频教程
 
-USB 基本知识点与 CherryUSB Device 协议栈是如何编写的，参考 [CherryUSB Device 协议栈教程](https://www.bilibili.com/video/BV1Ef4y1t73d).
+- USB 基本知识点与 CherryUSB Device 协议栈是如何编写的（使用v0.4.1 版本），参考 https://www.bilibili.com/video/BV1Ef4y1t73d.
+- CherryUSB 腾讯会议（使用v1.1.0 版本），参考 https://www.bilibili.com/video/BV16x421y7mM.
 
 ## 图形化界面配置工具
 
@@ -160,24 +182,22 @@ USB 基本知识点与 CherryUSB Device 协议栈是如何编写的，参考 [Ch
 
 ## 示例仓库
 
-|   厂商               |  芯片或者系列      | USB IP| 仓库链接 |      对应 master 版本        |
-|:--------------------:|:------------------:|:-----:|:--------:|:---------------------------:|
-|Bouffalolab    |  BL702/BL616/BL808 | bouffalolab/ehci|[bouffalo_sdk](https://github.com/CherryUSB/cherryusb_bouffalolab)| v0.9.0 |
-|ST    |  STM32F1x | fsdev |[stm32_repo](https://github.com/CherryUSB/cherryusb_stm32)|latest |
-|ST    |  STM32F4/STM32H7 | dwc2 |[stm32_repo](https://github.com/CherryUSB/cherryusb_stm32)|latest |
-|HPMicro    |  HPM6750 | hpm/ehci |[hpm_sdk](https://github.com/CherryUSB/cherryusb_hpmicro)|v0.8.0 |
-|Essemi    |  ES32F36xx | musb |[es32f369_repo](https://github.com/CherryUSB/cherryusb_es32)|latest |
-|AllwinnerTech    |  F1C100S/F1C200S | musb |[cherryusb_rtt_f1c100s](https://github.com/CherryUSB/cherryusb_rtt_f1c100s)|latest |
-|Phytium |  e2000 | xhci |[phytium_repo](https://gitee.com/phytium_embedded/phytium-free-rtos-sdk)|v0.9.0 |
-|Raspberry pi |  rp2040 | rp2040 |[pico-examples](https://github.com/CherryUSB/pico-examples)|latest |
-|WCH    |  CH32V307/ch58x | ch32_usbfs/ch32_usbhs/ch58x |[wch_repo](https://github.com/CherryUSB/cherryusb_wch)|latest |
-|Nordicsemi |  Nrf52840 | nrf5x |[nrf5x_repo](https://github.com/CherryUSB/cherryusb_nrf5x)|latest |
-|Espressif    |  esp32s3 | dwc2 |[esp32_repo](https://github.com/CherryUSB/cherryusb_esp32)|latest |
-|Bekencorp    |  BK72xx | musb |[armino](https://github.com/CherryUSB/armino)|v0.7.0 |
-|Sophgo    |  cv18xx | dwc2 |[cvi_alios_open](https://github.com/CherryUSB/cvi_alios_open)|v0.7.0 |
-|Nuvoton    |  Nuc442 | nuvoton |[nuc442_repo](https://github.com/CherryUSB/cherryusb_nuc442)|v0.4.1 |
-|Geehy    |  APM32E10x APM32F0xx| fsdev |[apm32_repo](https://github.com/CherryUSB/cherryusb_apm32)|v0.4.1 |
+|   Manufacturer       |  CHIP or Series    | USB IP| Repo Url | Support version     | Support status |
+|:--------------------:|:------------------:|:-----:|:--------:|:------------------:|:-------------:|
+|Bouffalolab    |  BL702/BL616/BL808 | bouffalolab/ehci|[bouffalo_sdk](https://github.com/CherryUSB/bouffalo_sdk)|<= latest | Long-term |
+|ST    |  STM32F1x | fsdev |[stm32_repo](https://github.com/CherryUSB/cherryusb_stm32)|<= latest | Long-term |
+|ST    |  STM32F4/STM32H7 | dwc2 |[stm32_repo](https://github.com/CherryUSB/cherryusb_stm32)|<= latest | Long-term |
+|HPMicro    |  HPM6750 | hpm/ehci |[hpm_sdk](https://github.com/CherryUSB/hpm_sdk)|<= latest | Long-term |
+|Essemi    |  ES32F36xx | musb |[es32f369_repo](https://github.com/CherryUSB/cherryusb_es32)|<= latest | Long-term |
+|Phytium |  e2000 | pusb2/xhci |[phytium_repo](https://gitee.com/phytium_embedded/phytium-free-rtos-sdk)|v0.10.2  | Long-term |
+|artinchip |  d12x/d13x/d21x | dwc2/ehci/ohci |[luban-lite](https://gitee.com/artinchip/luban-lite)|<= latest  | Long-term |
+|Espressif    |  esp32s2/esp32s3 | dwc2 |[esp32_repo](https://github.com/CherryUSB/cherryusb_esp32)|<= latest | the same with ST |
+|AllwinnerTech    |  F1C100S/F1C200S | musb |[cherryusb_rtt_f1c100s](https://github.com/CherryUSB/cherryusb_rtt_f1c100s)|<= latest | the same with Essemi |
+|WCH    |  CH32V307/ch58x | ch32_usbfs/ch32_usbhs/ch58x |[wch_repo](https://github.com/CherryUSB/cherryusb_wch)|<= v0.10.2 | TBD |
+|Nordicsemi |  Nrf52840 | nrf5x |[nrf5x_repo](https://github.com/CherryUSB/cherryusb_nrf5x)|<= v0.10.2 | No more updated |
+|Raspberry pi |  rp2040 | rp2040 |[pico-examples](https://github.com/CherryUSB/pico-examples)|<= v0.10.2 | No more updated |
 
 ## Contact
 
-QQ 群:642693751
+CherryUSB QQ 群:642693751
+CherryUSB 微信群：与我联系后邀请加入

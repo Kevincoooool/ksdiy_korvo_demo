@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2024, sakumisu
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 #include "usbd_core.h"
 #include "usbd_dfu.h"
 
@@ -137,7 +142,7 @@ const uint8_t dfu_flash_descriptor[] = {
     0x00
 };
 
-void usbd_event_handler(uint8_t event)
+static void usbd_event_handler(uint8_t busid, uint8_t event)
 {
     switch (event) {
         case USBD_EVENT_RESET:
@@ -164,9 +169,9 @@ void usbd_event_handler(uint8_t event)
 
 struct usbd_interface intf0;
 
-void dfu_flash_init(void)
+void dfu_flash_init(uint8_t busid, uint32_t reg_base)
 {
-    usbd_desc_register(dfu_flash_descriptor);
-    usbd_add_interface(usbd_dfu_init_intf(&intf0));
-    usbd_initialize();
+    usbd_desc_register(busid, dfu_flash_descriptor);
+    usbd_add_interface(busid, usbd_dfu_init_intf(&intf0));
+    usbd_initialize(busid, reg_base, usbd_event_handler);
 }
