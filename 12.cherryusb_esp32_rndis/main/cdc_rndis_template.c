@@ -1,6 +1,13 @@
 #include "usbd_core.h"
 #include "usbd_rndis.h"
 
+#include "esp_log.h"
+#include "esp_mac.h"
+#include "esp_netif.h"
+#include "esp_netif_net_stack.h"
+
+#include "esp_bridge_internal.h"
+#include "esp_bridge.h"
 /*!< endpoint address */
 #define CDC_IN_EP 0x81
 #define CDC_OUT_EP 0x02
@@ -174,8 +181,15 @@ static esp_err_t netsuite_io_transmit_wrap(void *h, void *buffer, size_t len, vo
 static esp_err_t netsuite_io_attach(esp_netif_t *esp_netif, void *arg);
 // static httpd_handle_t server = NULL;
 // TODO: implement rx here?
-const esp_netif_driver_ifconfig_t driver_ifconfig = {
-    .driver_free_rx_buffer = NULL,
+static void usb_driver_free_rx_buffer(void *h, void *buffer)
+{
+    if (buffer)
+    {
+        free(buffer);
+    }
+}
+const esp_netif_driver_ifconfig_t usb_driver_ifconfig = {
+    .driver_free_rx_buffer = usb_driver_free_rx_buffer,
     .transmit = netsuite_io_transmit,
     .transmit_wrap = netsuite_io_transmit_wrap,
     .handle = "usbx_net-netsuite-io-object" // this IO object is a singleton, its handle uses as a name
@@ -230,15 +244,46 @@ esp_err_t usbx_netif_init(esp_netif_t *netif)
     // esp_netif_inherent_config_t esp_netif_config = ESP_NETIF_INHERENT_DEFAULT_WIFI_AP();
     // esp_netif_config.ip_info = &my_g_esp_netif_soft_ap_ip;
     // esp_netif_config.if_desc = "mywifi";
+    const esp_netif_inherent_config_t esp_netif_common_config = {
+        .flags = (ESP_NETIF_DHCP_SERVER | ESP_NETIF_FLAG_GARP | ESP_NETIF_FLAG_EVENT_IP_MODIFIED),
+        .get_ip_event = IP_EVENT_STA_GOT_IP,
+        .lost_ip_event = IP_EVENT_STA_LOST_IP,
+        .if_key = "USB_key",
+        .if_desc = "USB_Netif"};
+    // esp_netif_config_t usb_config = {
+    //     .base = &esp_netif_common_config,
+    //     .driver = &usb_driver_ifconfig,
+    //     // .stack = (const esp_netif_netstack_config_t*)&usb_netstack_config
+    // };
 
     // sprintf(cnt_buf, "test%d", cnt);
     // esp_netif_config.if_key = cnt_buf;
     // esp_netif_config.route_prio = 10;
 
-    // usb_netif = esp_netif_create_wifi(WIFI_IF_AP, &esp_netif_config);
-
+    usb_netif = esp_netif_create_wifi(WIFI_IF_AP, &esp_netif_common_config);
+    esp_netif_attach(usb_netif, netsuite_io_new());
     //    esp_netif_config_t cfg = ESP_NETIF_DEFAULT_WIFI_AP();
-    //     usb_netif = esp_netif_new(&cfg);
+    // usb_netif = esp_netif_new(&usb_config);
+    esp_netif_dhcps_stop(netif);
+    esp_netif_ip_info_t allocate_ip_info = {0};
+
+    esp_bridge_netif_request_ip(&allocate_ip_info);
+    esp_netif_set_ip_info(netif, &allocate_ip_info);
+    esp_netif_action_start(usb_netif, NULL, 0, NULL);
+    esp_netif_up(usb_netif);
+
+    esp_netif_dns_info_t dns;
+    dns.ip.u_addr.ip4.addr = ESP_IP4TOADDR(114, 114, 114, 114);
+    dns.ip.type = IPADDR_TYPE_V4;
+    dhcps_offer_t dhcps_dns_value = OFFER_DNS;
+    ESP_ERROR_CHECK(esp_netif_dhcps_option(usb_netif, ESP_NETIF_OP_SET, ESP_NETIF_DOMAIN_NAME_SERVER, &dhcps_dns_value, sizeof(dhcps_dns_value)));
+    ESP_ERROR_CHECK(esp_netif_set_dns_info(usb_netif, ESP_NETIF_DNS_MAIN, &dns));
+    ESP_ERROR_CHECK(esp_netif_dhcps_start(usb_netif));
+    esp_netif_ip_info_t netif_ip_info = {0};
+
+    esp_netif_get_ip_info(usb_netif, &netif_ip_info);
+    ESP_LOGI(TAG, "USB IP Address:" IPSTR, IP2STR(&netif_ip_info.ip));
+    ip_napt_enable(netif_ip_info.ip.addr, 1);
     // esp_netif_inherent_config_t base_cfg = ESP_NETIF_INHERENT_DEFAULT_WIFI_STA();
     // base_cfg.if_desc = "mesh_link_ap";
     // base_cfg.ip_info = &my_g_esp_netif_soft_ap_ip;
@@ -251,41 +296,38 @@ esp_err_t usbx_netif_init(esp_netif_t *netif)
 
     // esp_netif_attach_wifi_station(usb_netif);
 
-
-
     // printf("Registering Wifi station driver...\n");
-//   esp_netif_config_t cfg_sta = ESP_NETIF_DEFAULT_WIFI_STA();
-//   netif_sta = esp_netif_new(&cfg_sta);
-//   assert(netif_sta);
-//   ESP_ERROR_CHECK(esp_netif_attach_wifi_station(netif_sta));
-//   // ESP_ERROR_CHECK(esp_wifi_set_default_wifi_sta_handlers());
-//   sta_driver = (wifi_netif_driver_t)esp_netif_get_io_driver(netif_sta);
-//   ESP_ERROR_CHECK(esp_wifi_register_if_rxcb(sta_driver, wifi_rx_cb, netif_sta));
-static wifi_netif_driver_t ap_driver = NULL;
-  printf("Registering Wifi AP driver...\n");
-  esp_netif_config_t cfg_ap = ESP_NETIF_DEFAULT_WIFI_AP();
-  usb_netif = esp_netif_new(&cfg_ap);
-  assert(usb_netif);
-  ESP_ERROR_CHECK(esp_netif_attach_wifi_ap(usb_netif));
-  // ESP_ERROR_CHECK(esp_wifi_set_default_wifi_ap_handlers());
-  ap_driver = (wifi_netif_driver_t)esp_netif_get_io_driver(usb_netif);
-  ESP_ERROR_CHECK(esp_wifi_register_if_rxcb(ap_driver, esp_netif_receive, usb_netif));
+    //   esp_netif_config_t cfg_sta = ESP_NETIF_DEFAULT_WIFI_STA();
+    //   netif_sta = esp_netif_new(&cfg_sta);
+    //   assert(netif_sta);
+    //   ESP_ERROR_CHECK(esp_netif_attach_wifi_station(netif_sta));
+    //   // ESP_ERROR_CHECK(esp_wifi_set_default_wifi_sta_handlers());
+    //   sta_driver = (wifi_netif_driver_t)esp_netif_get_io_driver(netif_sta);
+    //   ESP_ERROR_CHECK(esp_wifi_register_if_rxcb(sta_driver, wifi_rx_cb, netif_sta));
+    // static wifi_netif_driver_t ap_driver = NULL;
+    //   printf("Registering Wifi AP driver...\n");
+    //   esp_netif_config_t cfg_ap = ESP_NETIF_DEFAULT_WIFI_AP();
+    //   usb_netif = esp_netif_new(&cfg_ap);
+    //   assert(usb_netif);
+    //   ESP_ERROR_CHECK(esp_netif_attach_wifi_ap(usb_netif));
+    //   // ESP_ERROR_CHECK(esp_wifi_set_default_wifi_ap_handlers());
+    //   ap_driver = (wifi_netif_driver_t)esp_netif_get_io_driver(usb_netif);
+    //   ESP_ERROR_CHECK(esp_wifi_register_if_rxcb(ap_driver, esp_netif_receive, usb_netif));
 
-    assert(usb_netif);
+    // //     assert(usb_netif);
 
-    esp_netif_attach(usb_netif, netsuite_io_new());
-    uint8_t actual_mac[6] = {0};
-    esp_netif_get_mac(usb_netif, actual_mac);
-    for (size_t i = 0; i < 6; i++)
-    {
-        printf("%x ", actual_mac[i]);
-    }
-    esp_netif_action_start(usb_netif, NULL, 0, NULL);
+    //     esp_netif_attach(usb_netif, netsuite_io_new());
+    //     uint8_t actual_mac[6] = {0};
+    //     esp_netif_get_mac(usb_netif, actual_mac);
+    //     for (size_t i = 0; i < 6; i++)
+    //     {
+    //         printf("%x ", actual_mac[i]);
+    //     }
+    //     esp_netif_action_start(usb_netif, NULL, 0, NULL);
 
+    // esp_bridge_create_usb_netif(NULL, NULL, true, true);
     ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, IP_EVENT_AP_STAIPASSIGNED, &got_ip_event_handler, usb_netif));
     ESP_LOGI(TAG, "Start netif ok");
-    esp_netif_dhcpc_start(usb_netif);
-    // esp_netif_set_ip_info(netif, &ipInfo);
     xTaskCreate(
         usb_task,   /* Task function. */
         "usbxTask", /* name of task. */
@@ -298,7 +340,7 @@ static wifi_netif_driver_t ap_driver = NULL;
 
 static esp_err_t netsuite_io_attach(esp_netif_t *esp_netif, void *arg)
 {
-    ESP_ERROR_CHECK(esp_netif_set_driver_config(esp_netif, &driver_ifconfig));
+    ESP_ERROR_CHECK(esp_netif_set_driver_config(esp_netif, &usb_driver_ifconfig));
     return ESP_OK;
 }
 

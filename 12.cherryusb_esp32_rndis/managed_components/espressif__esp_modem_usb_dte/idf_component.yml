@@ -1,0 +1,14 @@
+dependencies:
+  esp_modem:
+    version: '>=0.1.28,<2.0.0'
+  idf:
+    version: '>=4.4'
+  usb_host_cdc_acm:
+    version: 2.*
+description: USB DTE plugin for esp_modem component
+repository: git://github.com/espressif/esp-usb.git
+repository_info:
+  commit_sha: 6286d4f7df3b77479dc85b9f77fe71e7b6052ee1
+  path: host/class/cdc/esp_modem_usb_dte
+url: https://github.com/espressif/esp-usb/tree/master/host/class/cdc/esp_modem_usb_dte
+version: 1.2.0

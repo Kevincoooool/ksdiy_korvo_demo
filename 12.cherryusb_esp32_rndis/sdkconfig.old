@@ -803,7 +803,10 @@ CONFIG_LWIP_DHCPS_LEASE_UNIT=60
 CONFIG_LWIP_DHCPS_MAX_STATION_NUM=8
 # end of DHCP server
 
-# CONFIG_LWIP_AUTOIP is not set
+CONFIG_LWIP_AUTOIP=y
+CONFIG_LWIP_AUTOIP_TRIES=2
+CONFIG_LWIP_AUTOIP_MAX_CONFLICTS=9
+CONFIG_LWIP_AUTOIP_RATE_LIMIT_INTERVAL=20
 CONFIG_LWIP_IPV6=y
 # CONFIG_LWIP_IPV6_AUTOCONFIG is not set
 CONFIG_LWIP_IPV6_NUM_ADDRESSES=3
@@ -1201,7 +1204,39 @@ CONFIG_WS_BUFFER_SIZE=1024
 #
 # TinyUSB Stack
 #
-# CONFIG_TINYUSB is not set
+CONFIG_TINYUSB=y
+CONFIG_TINYUSB_DEBUG_LEVEL=0
+
+#
+# TinyUSB task configuration
+#
+# CONFIG_TINYUSB_NO_DEFAULT_TASK is not set
+CONFIG_TINYUSB_TASK_PRIORITY=5
+CONFIG_TINYUSB_TASK_STACK_SIZE=4096
+# end of TinyUSB task configuration
+
+#
+# Descriptor configuration
+#
+CONFIG_TINYUSB_DESC_USE_ESPRESSIF_VID=y
+CONFIG_TINYUSB_DESC_USE_DEFAULT_PID=y
+CONFIG_TINYUSB_DESC_BCD_DEVICE=0x0100
+CONFIG_TINYUSB_DESC_MANUFACTURER_STRING="Espressif Systems"
+CONFIG_TINYUSB_DESC_PRODUCT_STRING="Espressif Device"
+CONFIG_TINYUSB_DESC_SERIAL_STRING="123456"
+# end of Descriptor configuration
+
+#
+# Massive Storage Class (MSC)
+#
+# CONFIG_TINYUSB_MSC_ENABLED is not set
+# end of Massive Storage Class (MSC)
+
+#
+# Communication Device Class (CDC)
+#
+# CONFIG_TINYUSB_CDC_ENABLED is not set
+# end of Communication Device Class (CDC)
 # end of TinyUSB Stack
 
 #
@@ -1280,6 +1315,126 @@ CONFIG_WPA_MBEDTLS_CRYPTO=y
 # CONFIG_WPA_MBO_SUPPORT is not set
 # CONFIG_WPA_DPP_SUPPORT is not set
 # end of Supplicant
+
+#
+# Bridge Configuration
+#
+CONFIG_BRIDGE_ENABLE=y
+CONFIG_BRIDGE_WIFI_PMF_DISABLE=y
+
+#
+# The interface used to connect to the external network
+#
+CONFIG_BRIDGE_EXTERNAL_NETIF_STATION=y
+# CONFIG_BRIDGE_STATION_CANCEL_AUTO_CONNECT_WHEN_DISCONNECTED is not set
+# CONFIG_BRIDGE_EXTERNAL_NETIF_MODEM is not set
+# CONFIG_BRIDGE_EXTERNAL_NETIF_ETHERNET is not set
+# CONFIG_BRIDGE_EXTERNAL_NETIF_SPI is not set
+# end of The interface used to connect to the external network
+
+#
+# The interface used to provide network data forwarding for other devices
+#
+CONFIG_BRIDGE_DATA_FORWARDING_NETIF_SOFTAP=y
+
+#
+# SoftAP Config
+#
+CONFIG_BRIDGE_SOFTAP_SSID="ESP_Bridge"
+CONFIG_BRIDGE_SOFTAP_PASSWORD="12345678"
+# CONFIG_BRIDGE_SOFTAP_SSID_END_WITH_THE_MAC is not set
+CONFIG_BRIDGE_SOFTAP_CONNECT_NUMBER_RANGE_MAX=15
+CONFIG_BRIDGE_SOFTAP_MAX_CONNECT_NUMBER=6
+# end of SoftAP Config
+
+CONFIG_BRIDGE_DATA_FORWARDING_NETIF_USB=y
+# CONFIG_BRIDGE_DATA_FORWARDING_NETIF_ETHERNET is not set
+# CONFIG_BRIDGE_DATA_FORWARDING_NETIF_SPI is not set
+# end of The interface used to provide network data forwarding for other devices
+
+CONFIG_BRIDGE_GPIO_RANGE_MIN=0
+CONFIG_BRIDGE_GPIO_RANGE_MAX=48
+# end of Bridge Configuration
+
+#
+# Bridge TinyUSB Stack
+#
+
+#
+# TinyUSB task configuration
+#
+# end of TinyUSB task configuration
+
+#
+# Descriptor configuration
+#
+CONFIG_TINYUSB_DESC_NET_STRING="Espressif NET Device"
+# end of Descriptor configuration
+
+#
+# Massive Storage Class (MSC)
+#
+# end of Massive Storage Class (MSC)
+
+#
+# Communication Device Class (CDC)
+#
+# end of Communication Device Class (CDC)
+
+#
+# WebUSB
+#
+# CONFIG_TINYUSB_WEBUSB_ENABLED is not set
+# end of WebUSB
+
+#
+# Human Interface Device Class (HID)
+#
+# CONFIG_TINYUSB_HID_ENABLED is not set
+# end of Human Interface Device Class (HID)
+
+#
+# USB Network Class (RNDIS, ECM)
+#
+CONFIG_TINYUSB_NET_ENABLED=y
+CONFIG_TINYUSB_RNDIS_VENDOR="Espressif Incorporated"
+CONFIG_TINYUSB_NET_RNDIS=y
+# CONFIG_TINYUSB_NET_ECM is not set
+# end of USB Network Class (RNDIS, ECM)
+
+#
+# Bluetooth Host Class (BTH)
+#
+# CONFIG_TINYUSB_BTH_ENABLED is not set
+# end of Bluetooth Host Class (BTH)
+
+#
+# Firmware Upgrade Class (DFU)
+#
+# CONFIG_TINYUSB_DFU_ENABLED is not set
+# end of Firmware Upgrade Class (DFU)
+# end of Bridge TinyUSB Stack
+
+#
+# CMake Utilities
+#
+# CONFIG_CU_RELINKER_ENABLE is not set
+# CONFIG_CU_DIAGNOSTICS_COLOR_NEVER is not set
+CONFIG_CU_DIAGNOSTICS_COLOR_ALWAYS=y
+# CONFIG_CU_DIAGNOSTICS_COLOR_AUTO is not set
+# CONFIG_CU_GCC_LTO_ENABLE is not set
+# CONFIG_CU_GCC_STRING_1BYTE_ALIGN is not set
+# end of CMake Utilities
+
+#
+# esp-modem
+#
+CONFIG_ESP_MODEM_CMUX_DEFRAGMENT_PAYLOAD=y
+# CONFIG_ESP_MODEM_USE_INFLATABLE_BUFFER_IF_NEEDED is not set
+CONFIG_ESP_MODEM_CMUX_DELAY_AFTER_DLCI_SETUP=0
+# CONFIG_ESP_MODEM_CMUX_USE_SHORT_PAYLOADS_ONLY is not set
+# CONFIG_ESP_MODEM_ADD_CUSTOM_MODULE is not set
+# end of esp-modem
 # end of Component config
 
 #

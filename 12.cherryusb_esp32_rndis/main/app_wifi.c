@@ -42,8 +42,11 @@ char ssid[40];
 EventGroupHandle_t s_wifi_event_group; // wifi事件组
 
 #define EXAMPLE_ESP_WIFI_MODE_AP 0 // TRUE:AP FALSE:STA
-#define EXAMPLE_ESP_WIFI_SSID "SweetRain"
-#define EXAMPLE_ESP_WIFI_PASS "02060308"
+// #define EXAMPLE_ESP_WIFI_SSID "SweetRain"
+// #define EXAMPLE_ESP_WIFI_PASS "02060308"
+#define EXAMPLE_ESP_WIFI_SSID "CMCC-"
+#define EXAMPLE_ESP_WIFI_PASS "99999999"
+
 #define AP_ESP_WIFI_SSID "APSweetRain"
 #define AP_ESP_WIFI_PASS "02060308"
 #define EXAMPLE_MAX_STA_CONN 4

@@ -1,0 +1,539 @@
+menu "Bridge Configuration"
+    config BRIDGE_ENABLE
+        bool "Bridge Enable"
+        default y
+
+    config BRIDGE_WIFI_PMF_DISABLE
+        bool "Wi-Fi PMF Disable"
+        default y
+
+    menu "The interface used to connect to the external network"
+        config BRIDGE_EXTERNAL_NETIF_STATION
+            bool "Use Wi-Fi station interface to connect to the external network"
+            default y
+
+        config BRIDGE_STATION_CANCEL_AUTO_CONNECT_WHEN_DISCONNECTED
+            depends on BRIDGE_EXTERNAL_NETIF_STATION
+            bool "Wi-Fi station do not automatically connect Wi-Fi when disconnected"
+            default n
+
+        config BRIDGE_EXTERNAL_NETIF_MODEM
+            bool "Use 4G modem interface to connect to the external network"
+            default n
+
+        config BRIDGE_EXTERNAL_NETIF_ETHERNET
+            bool "Use ethernet interface to connect to the external network. Please disable BRIDGE_DATA_FORWARDING_NETIF_ETHERNET first"
+            default n
+            help
+                "BRIDGE_EXTERNAL_NETIF_ETHERNET" and "BRIDGE_DATA_FORWARDING_NETIF_ETHERNET" cannot be enabled simultaneously at the moment.
+
+        config BRIDGE_EXTERNAL_NETIF_SPI
+            bool "Use SPI interface to connect to the external network. Please note that SPI Netif and SDIO Netif cannot be enabled simultaneously."
+            default n
+            help
+                "BRIDGE_EXTERNAL_NETIF_SPI",
+                "BRIDGE_EXTERNAL_NETIF_SDIO",
+                "BRIDGE_DATA_FORWARDING_NETIF_SPI",
+                "BRIDGE_DATA_FORWARDING_NETIF_SDIO" are currently not supported to be enabled simultaneously.
+
+        config BRIDGE_EXTERNAL_NETIF_SDIO
+            bool "Use SDIO interface to connect to the external network. Please note that SPI Netif and SDIO Netif cannot be enabled simultaneously."
+            depends on IDF_TARGET_ESP32 || IDF_TARGET_ESP32C6
+            default n
+            help
+                "BRIDGE_EXTERNAL_NETIF_SPI",
+                "BRIDGE_EXTERNAL_NETIF_SDIO",
+                "BRIDGE_DATA_FORWARDING_NETIF_SPI",
+                "BRIDGE_DATA_FORWARDING_NETIF_SDIO" are currently not supported to be enabled simultaneously.
+    endmenu
+
+    menu "The interface used to provide network data forwarding for other devices"
+        config BRIDGE_DATA_FORWARDING_NETIF_SOFTAP
+            bool "Use Wi-Fi SoftAP interface to provide network data forwarding for other devices"
+            default y
+
+            menu "BRIDGE_CUSTOM_SOFTAP is enabled, please configure SoftAP in \"By custom SoftAP menu\""
+                visible if BRIDGE_CUSTOM_SOFTAP
+            endmenu
+
+            menu "SoftAP Config"
+                depends on BRIDGE_DATA_FORWARDING_NETIF_SOFTAP
+                visible if !BRIDGE_CUSTOM_SOFTAP
+
+                config BRIDGE_SOFTAP_SSID
+                    string
+                    prompt "SoftAP SSID"
+                    default "ESP_Bridge" if !BRIDGE_CUSTOM_SOFTAP
+                    default BRIDGE_CUSTOM_SOFTAP_SSID if BRIDGE_CUSTOM_SOFTAP
+                    help
+                        SSID of ESP-Bridge SoftAP.
+
+                config BRIDGE_SOFTAP_PASSWORD
+                    string "SoftAP Password"
+                    default "12345678" if !BRIDGE_CUSTOM_SOFTAP
+                    default BRIDGE_CUSTOM_SOFTAP_PASSWORD if BRIDGE_CUSTOM_SOFTAP
+                    help
+                        password of ESP-Bridge SoftAP.
+
+                config BRIDGE_SOFTAP_SSID_END_WITH_THE_MAC
+                    bool "SoftAP SSID ends with the MAC"
+                    default n if !BRIDGE_CUSTOM_SOFTAP
+                    default BRIDGE_CUSTOM_SOFTAP_SSID_END_WITH_THE_MAC if BRIDGE_CUSTOM_SOFTAP
+                    help
+                        Add MAC to the end of SSID
+
+                config BRIDGE_SOFTAP_CONNECT_NUMBER_RANGE_MAX
+                    int
+                    default 4 if IDF_TARGET_ESP32C2
+                    default 15
+
+                config BRIDGE_SOFTAP_MAX_CONNECT_NUMBER
+                    int "Maximum number of connections per node"
+                    default 6 if !BRIDGE_CUSTOM_SOFTAP
+                    default BRIDGE_CUSTOM_MAX_CONNECT_NUMBER if BRIDGE_CUSTOM_SOFTAP
+                    range 1 LWIP_DHCPS_MAX_STATION_NUM if LWIP_DHCPS_MAX_STATION_NUM < BRIDGE_SOFTAP_CONNECT_NUMBER_RANGE_MAX
+                    range 1 BRIDGE_SOFTAP_CONNECT_NUMBER_RANGE_MAX if LWIP_DHCPS_MAX_STATION_NUM >= BRIDGE_SOFTAP_CONNECT_NUMBER_RANGE_MAX
+                    help
+                        CONFIG_LWIP_DHCPS_MAX_STATION_NUM must be greater than or equal to BRIDGE_SOFTAP_MAX_CONNECT_NUMBER
+            endmenu
+
+        config BRIDGE_DATA_FORWARDING_NETIF_USB
+            bool "Use USB interface to provide network data forwarding for other devices"
+            depends on IDF_TARGET_ESP32S2 || IDF_TARGET_ESP32S3
+            select TINYUSB
+            select TINYUSB_NET_ENABLED
+            default n
+
+        config BRIDGE_DATA_FORWARDING_NETIF_ETHERNET
+            bool "Use ethernet interface to provide network data forwarding for other devices"
+            depends on !BRIDGE_EXTERNAL_NETIF_ETHERNET
+            default n
+            help
+                "BRIDGE_EXTERNAL_NETIF_ETHERNET" and "BRIDGE_DATA_FORWARDING_NETIF_ETHERNET" cannot be enabled simultaneously at the moment.
+
+        config BRIDGE_DATA_FORWARDING_NETIF_SPI
+            bool "Use SPI interface to provide network data forwarding for other devices. Please note that SPI Netif and SDIO Netif cannot be enabled simultaneously."
+            default n
+            help
+                "BRIDGE_EXTERNAL_NETIF_SPI",
+                "BRIDGE_EXTERNAL_NETIF_SDIO",
+                "BRIDGE_DATA_FORWARDING_NETIF_SPI",
+                "BRIDGE_DATA_FORWARDING_NETIF_SDIO" are currently not supported to be enabled simultaneously.
+
+        config BRIDGE_DATA_FORWARDING_NETIF_SDIO
+            bool "Use SDIO interface to provide network data forwarding for other devices. Please note that SPI Netif and SDIO Netif cannot be enabled simultaneously."
+            depends on IDF_TARGET_ESP32 || IDF_TARGET_ESP32C6
+            default n
+            help
+                "BRIDGE_EXTERNAL_NETIF_SPI",
+                "BRIDGE_EXTERNAL_NETIF_SDIO",
+                "BRIDGE_DATA_FORWARDING_NETIF_SPI",
+                "BRIDGE_DATA_FORWARDING_NETIF_SDIO" are currently not supported to be enabled simultaneously.
+    endmenu
+
+    config BRIDGE_GPIO_RANGE_MIN
+        int
+        default 0
+
+    config BRIDGE_GPIO_RANGE_MAX
+        int
+        default 33 if IDF_TARGET_ESP32
+        default 20 if IDF_TARGET_ESP32C2
+        default 19 if IDF_TARGET_ESP32C3
+        default 23 if IDF_TARGET_ESP32C6
+        default 46 if IDF_TARGET_ESP32S2
+        default 48 if IDF_TARGET_ESP32S3
+
+    menu "ETH Configuration"
+        depends on BRIDGE_EXTERNAL_NETIF_ETHERNET || BRIDGE_DATA_FORWARDING_NETIF_ETHERNET
+
+        choice BRIDGE_ETHERNET_TYPE
+            prompt "Ethernet Type"
+            default BRIDGE_USE_INTERNAL_ETHERNET if IDF_TARGET_ESP32
+            default BRIDGE_USE_SPI_ETHERNET if !IDF_TARGET_ESP32
+            help
+                Select which kind of Ethernet will be used in the ESP-Bridge.
+
+            config BRIDGE_USE_INTERNAL_ETHERNET
+                depends on IDF_TARGET_ESP32
+                select ETH_USE_ESP32_EMAC
+                bool "Internal EMAC"
+                help
+                    Use internal Ethernet MAC controller.
+
+            config BRIDGE_USE_SPI_ETHERNET
+                bool "SPI Ethernet"
+                select ETH_USE_SPI_ETHERNET
+                help
+                    Use external SPI-Ethernet module(s).
+        endchoice
+
+        if BRIDGE_USE_INTERNAL_ETHERNET
+            menu "Bridge ETH PHY Model"
+                config BRIDGE_ETH_PHY_IP101
+                    bool "IP101"
+                    default y
+                    help
+                        IP101 is a single port 10/100 MII/RMII/TP/Fiber Fast Ethernet Transceiver.
+                        Goto http://www.icplus.com.tw/pp-IP101G.html for more information about it.
+
+                config BRIDGE_ETH_PHY_RTL8201
+                    bool "RTL8201/SR8201"
+                    default y
+                    help
+                        RTL8201F/SR8201F is a single port 10/100Mb Ethernet Transceiver with auto MDIX.
+                        Goto http://www.corechip-sz.com/productsview.asp?id=22 for more information about it.
+
+                config BRIDGE_ETH_PHY_LAN87XX
+                    bool "LAN87xx"
+                    default y
+                    help
+                        Below chips are supported:
+                        LAN8710A is a small footprint MII/RMII 10/100 Ethernet Transceiver with HP Auto-MDIX and
+                            flexPWR® Technology.
+                        LAN8720A is a small footprint RMII 10/100 Ethernet Transceiver with HP Auto-MDIX Support.
+                        LAN8740A/LAN8741A is a small footprint MII/RMII 10/100 Energy Efficient Ethernet Transceiver
+                            with HP Auto-MDIX and flexPWR® Technology.
+                        LAN8742A is a small footprint RMII 10/100 Ethernet Transceiver with HP Auto-MDIX and
+                            flexPWR® Technology.
+                        Goto https://www.microchip.com for more information about them.
+
+                config BRIDGE_ETH_PHY_DP83848
+                    bool "DP83848"
+                    default y
+                    help
+                        DP83848 is a single port 10/100Mb/s Ethernet Physical Layer Transceiver.
+                        Goto http://www.ti.com/product/DP83848J for more information about it.
+
+                config BRIDGE_ETH_PHY_KSZ80XX
+                    bool "KSZ80xx"
+                    default y
+                    help
+                        With the KSZ80xx series, Microchip offers single-chip 10BASE-T/100BASE-TX
+                        Ethernet Physical Layer Tranceivers (PHY).
+                        The following chips are supported: KSZ8001, KSZ8021, KSZ8031, KSZ8041,
+                            KSZ8051, KSZ8061, KSZ8081, KSZ8091
+                        Goto https://www.microchip.com for more information about them.
+            endmenu
+
+            config BRIDGE_ETH_MDC_GPIO
+                int "SMI MDC GPIO number"
+                range BRIDGE_GPIO_RANGE_MIN BRIDGE_GPIO_RANGE_MAX
+                default 23
+                help
+                    Set the GPIO number used by SMI MDC.
+
+            config BRIDGE_ETH_MDIO_GPIO
+                int "SMI MDIO GPIO number"
+                range BRIDGE_GPIO_RANGE_MIN BRIDGE_GPIO_RANGE_MAX
+                default 18
+                help
+                    Set the GPIO number used by SMI MDIO.
+
+            config BRIDGE_ETH_PHY_RST_GPIO
+                int "PHY Reset GPIO number"
+                range -1 BRIDGE_GPIO_RANGE_MAX
+                default 5
+                help
+                    Set the GPIO number used to reset PHY chip.
+                    Set to -1 to disable PHY chip hardware reset.
+
+            config BRIDGE_ETH_PHY_ADDR
+                int "PHY Address"
+                range 0 31
+                default 1
+                help
+                    Set PHY address according your board schematic.
+        endif # BRIDGE_USE_INTERNAL_ETHERNET
+
+        if BRIDGE_USE_SPI_ETHERNET
+            config BRIDGE_ETH_SPI_HOST
+                int "SPI Host Number"
+                range 0 2
+                default 1
+                help
+                    Set the SPI host used to communicate with the SPI Ethernet Controller.
+
+            config BRIDGE_ETH_SPI_SCLK_GPIO
+                int "SPI SCLK GPIO number"
+                range BRIDGE_GPIO_RANGE_MIN BRIDGE_GPIO_RANGE_MAX
+                default 14 if IDF_TARGET_ESP32
+                default 17 if IDF_TARGET_ESP32S2 || IDF_TARGET_ESP32S3
+                default 6
+                help
+                    Set the GPIO number used by SPI SCLK.
+
+            config BRIDGE_ETH_SPI_MOSI_GPIO
+                int "SPI MOSI GPIO number"
+                range BRIDGE_GPIO_RANGE_MIN BRIDGE_GPIO_RANGE_MAX
+                default 13 if IDF_TARGET_ESP32
+                default 16 if IDF_TARGET_ESP32S2 || IDF_TARGET_ESP32S3
+                default 7
+                help
+                    Set the GPIO number used by SPI MOSI.
+
+            config BRIDGE_ETH_SPI_MISO_GPIO
+                int "SPI MISO GPIO number"
+                range BRIDGE_GPIO_RANGE_MIN BRIDGE_GPIO_RANGE_MAX
+                default 12 if IDF_TARGET_ESP32
+                default 18 if IDF_TARGET_ESP32S2 || IDF_TARGET_ESP32S3
+                default 2
+                help
+                    Set the GPIO number used by SPI MISO.
+
+            config BRIDGE_ETH_SPI_CLOCK_MHZ
+                int "SPI clock speed (MHz)"
+                range 5 80
+                default 23 if IDF_TARGET_ESP32S2 || IDF_TARGET_ESP32S3
+                default 12
+                help
+                    Set the clock speed (MHz) of SPI interface.
+
+            config BRIDGE_ETH_SPI_CS0_GPIO
+                int "SPI CS0 GPIO number for SPI Ethernet module #1"
+                range BRIDGE_GPIO_RANGE_MIN BRIDGE_GPIO_RANGE_MAX
+                default 15 if IDF_TARGET_ESP32
+                default 10
+                help
+                    Set the GPIO number used by SPI CS0, i.e. Chip Select associated with the first SPI Eth module).
+
+            config BRIDGE_ETH_SPI_INT0_GPIO
+                int "Interrupt GPIO number SPI Ethernet module #1"
+                range BRIDGE_GPIO_RANGE_MIN BRIDGE_GPIO_RANGE_MAX
+                default 4
+                help
+                    Set the GPIO number used by the first SPI Ethernet module interrupt line.
+
+            config BRIDGE_ETH_SPI_PHY_RST0_GPIO
+                int "PHY Reset GPIO number of SPI Ethernet Module #1"
+                range -1 BRIDGE_GPIO_RANGE_MAX
+                default -1
+                help
+                    Set the GPIO number used to reset PHY chip on the first SPI Ethernet module.
+                    Set to -1 to disable PHY chip hardware reset.
+
+            config BRIDGE_ETH_SPI_PHY_ADDR0
+                int "PHY Address of SPI Ethernet Module #1"
+                range 0 31
+                default 1
+                help
+                    Set the first SPI Ethernet module PHY address according your board schematic.
+        endif # BRIDGE_USE_SPI_ETHERNET
+    endmenu
+
+    menu "Modem Configuration"
+        depends on BRIDGE_EXTERNAL_NETIF_MODEM
+
+        choice BRIDGE_SERIAL_CONFIG
+            prompt "Choose the interface of the modem (UART or USB)"
+            default BRIDGE_SERIAL_VIA_UART if IDF_TARGET_ESP32 || IDF_TARGET_ESP32C3
+            default BRIDGE_SERIAL_VIA_USB if IDF_TARGET_ESP32S2 || IDF_TARGET_ESP32S3
+            config BRIDGE_SERIAL_VIA_UART
+                bool "UART"
+                help
+                    Connect to modem via UART.
+            config BRIDGE_SERIAL_VIA_USB
+                bool "USB"
+                depends on IDF_TARGET_ESP32S2 || IDF_TARGET_ESP32S3
+                help
+                    Connect to modem via USB (CDC-ACM class). For IDF version >= 4.4.
+        endchoice
+
+        choice BRIDGE_MODEM_DEVICE
+            depends on BRIDGE_SERIAL_VIA_UART
+            prompt "Choose supported modem device (DCE)"
+            default BRIDGE_MODEM_DEVICE_BG96
+            help
+                Select modem device connected to the ESP DTE.
+            config BRIDGE_MODEM_DEVICE_SIM800
+                bool "SIM800"
+                help
+                    SIMCom SIM800L is a GSM/GPRS module.
+                    It supports Quad-band 850/900/1800/1900MHz.
+            config BRIDGE_MODEM_DEVICE_BG96
+                bool "BG96"
+                help
+                    Quectel BG96 is a series of LTE Cat M1/Cat NB1/EGPRS module.
+            config BRIDGE_MODEM_DEVICE_SIM7000
+                bool "SIM7000"
+                help
+                    SIM7000 is a Multi-Band LTE-FDD and GSM/GPRS/EDGE module.
+            config BRIDGE_MODEM_DEVICE_SIM7070
+                bool "SIM7070"
+                help
+                    SIM7070 is Multi-Band CAT M and NB IoT module.
+            config BRIDGE_MODEM_DEVICE_SIM7600
+                bool "SIM7600"
+                help
+                    SIM7600 is a Multi-Band LTE-TDD/LTE-FDD/HSPA+ and GSM/GPRS/EDGE module.
+        endchoice
+
+        config MODEM_RESET_GPIO
+            int "Modem reset control GPIO, set 0 if not use"
+            default 13
+
+        config BRIDGE_MODEM_PPP_APN
+            string "Set MODEM APN"
+            default "internet"
+            help
+                Set APN (Access Point Name), a logical name to choose data network
+
+        config BRIDGE_MODEM_PPP_AUTH_USERNAME
+            string "Set username for authentication"
+            default "espressif"
+            depends on !BRIDGE_MODEM_PPP_AUTH_NONE
+            help
+                Set username for PPP Authentication.
+
+        config BRIDGE_MODEM_PPP_AUTH_PASSWORD
+            string "Set password for authentication"
+            default "esp32"
+            depends on !BRIDGE_MODEM_PPP_AUTH_NONE
+            help
+                Set password for PPP Authentication.
+
+        config BRIDGE_MODEM_PPP_AUTH_NONE
+            bool "Skip PPP authentication"
+            default n
+            help
+                Set to true for the PPP client to skip authentication
+
+        config BRIDGE_NEED_SIM_PIN
+            bool "SIM PIN needed"
+            default n
+            help
+                Enable to set SIM PIN before starting the example
+
+        config BRIDGE_SIM_PIN
+            string "Set SIM PIN"
+            default "1234"
+            depends on BRIDGE_NEED_SIM_PIN
+            help
+                Pin to unlock the SIM
+
+        menu "USB Configuration"
+            depends on BRIDGE_SERIAL_VIA_USB
+
+            config BRIDGE_MODEM_USB_VID
+                hex "USB Vendor ID"
+                default 0x2C7C
+                help
+                    Set the USB Vendor ID for 4G Modem
+
+            config BRIDGE_MODEM_USB_PID
+                hex "USB Product ID"
+                default 0x0296
+                help
+                    Set the USB Product ID for 4G Modem
+
+            config BRIDGE_MODEM_USB_INTERFACE_NUMBER
+                int "USB interface number"
+                default 2
+                help
+                    Set the USB interface number for 4G Modem
+
+        endmenu
+
+        menu "UART Configuration"
+            depends on BRIDGE_SERIAL_VIA_UART
+
+            config BRIDGE_MODEM_UART_TX_PIN
+                int "UART Tx GPIO number of Modem"
+                range BRIDGE_GPIO_RANGE_MIN BRIDGE_GPIO_RANGE_MAX
+                default 32 if IDF_TARGET_ESP32
+                default 25 if IDF_TARGET_ESP32S2 || IDF_TARGET_ESP32S3
+                default 4
+                help
+                    Set the GPIO number used by uart Tx
+
+            config BRIDGE_MODEM_UART_RX_PIN
+                int "UART Rx GPIO number of Modem"
+                range BRIDGE_GPIO_RANGE_MIN BRIDGE_GPIO_RANGE_MAX
+                default 33 if IDF_TARGET_ESP32
+                default 26 if IDF_TARGET_ESP32S2 || IDF_TARGET_ESP32S3
+                default 5
+                help
+                    Set the GPIO number used by uart Rx
+
+            config BRIDGE_MODEM_UART_RTS_PIN
+                int "RTS Pin Number"
+                default 27
+                range 0 31
+                help
+                    Pin number of UART RTS.
+
+            config BRIDGE_MODEM_UART_CTS_PIN
+                int "CTS Pin Number"
+                default 23
+                range 0 31
+                help
+                    Pin number of UART CTS.
+
+            config BRIDGE_MODEM_BAUD_RATE
+                int "UART baud rate of Modem"
+                default 115200
+                help
+                    Set the baud rate of uart
+
+            config BRIDGE_MODEM_UART_EVENT_TASK_STACK_SIZE
+                int "UART Event Task Stack Size"
+                range 2000 6000
+                default 2048
+                help
+                    Stack size of UART event task.
+
+            config BRIDGE_MODEM_UART_EVENT_TASK_PRIORITY
+                int "UART Event Task Priority"
+                range 3 22
+                default 5
+                help
+                    Priority of UART event task.
+
+            config BRIDGE_MODEM_UART_EVENT_QUEUE_SIZE
+                int "UART Event Queue Size"
+                range 10 40
+                default 30
+                help
+                    Length of UART event queue.
+
+            config BRIDGE_MODEM_UART_PATTERN_QUEUE_SIZE
+                int "UART Pattern Queue Size"
+                range 10 40
+                default 20
+                help
+                    Length of UART pattern queue.
+
+            config BRIDGE_MODEM_UART_TX_BUFFER_SIZE
+                int "UART TX Buffer Size"
+                range 256 2048
+                default 512
+                help
+                    Buffer size of UART TX buffer.
+
+            config BRIDGE_MODEM_UART_RX_BUFFER_SIZE
+                int "UART RX Buffer Size"
+                range 256 2048
+                default 1024
+                help
+                    Buffer size of UART RX buffer.
+
+            choice BRIDGE_FLOW_CONTROL
+                bool "Set preferred modem control flow"
+                default BRIDGE_FLOW_CONTROL_NONE
+                help
+                    Set the modem's preferred control flow
+
+                config BRIDGE_FLOW_CONTROL_NONE
+                    bool "No control flow"
+                config BRIDGE_FLOW_CONTROL_SW
+                    bool "SW control flow"
+                config BRIDGE_FLOW_CONTROL_HW
+                    bool "HW control flow"
+            endchoice
+
+        endmenu
+
+    endmenu
+
+    rsource "drivers/Kconfig"
+endmenu
