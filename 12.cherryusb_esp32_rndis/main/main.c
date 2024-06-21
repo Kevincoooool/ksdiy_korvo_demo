@@ -82,12 +82,13 @@ void app_main()
     ESP_ERROR_CHECK(esp_netif_init());
     ESP_LOGI("TAG", "esp_netif init success.");
     ESP_ERROR_CHECK(esp_event_loop_create_default());
+        xTaskCreatePinnedToCore(check_usb_task, "check_usb_task", 4096, NULL, 8, NULL, 1);
+
     app_wifi_init();
     ESP_ERROR_CHECK(usbx_netif_init(usb_netif));
     ESP_LOGI("TAG", "usbx_netif init success.");
 
     // cdc_rndis_init(0, 0x60080000);
-    xTaskCreatePinnedToCore(check_usb_task, "check_usb_task", 4096, NULL, 8, NULL, 1);
 
     while (1)
     {
